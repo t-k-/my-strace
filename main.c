@@ -20,6 +20,8 @@
 #define SC_WRITE  1
 #define SC_OPEN   2
 #define SC_CLOSE  3
+#define SC_EXECVE 59
+#define SC_CLONE  56
 
 #define PEEK_STR(_reg) \
 	peek_string(child, OFFSETOF(struct user_regs_struct, _reg))
@@ -98,6 +100,15 @@ void explain_system_call(pid_t child)
 		printf(")");
 
 		printf(" %s\n", tmp_str);
+	} else if (num == SC_EXECVE) {
+		printf("exe!!!!!!!!!!!\n");
+	} else if (num == SC_CLONE) {
+		printf("clone!!!!!!!!!!!\n");
+		tmp_long = PEEK_LONG(rdx);
+		printf("%ld\n", tmp_long);
+		tmp_long = PEEK_LONG(r10);
+		printf("%ld\n", tmp_long);
+		printf("%d\n", (int)(tmp_long & 0xffffffff));
 	}
 }
 
@@ -109,6 +120,7 @@ int do_run(int argn, char **argv)
 	for (i = 0; i < argn; i++) {
 		printf("%s ", argv[i]);
 	}
+	printf("\n");
 
 	if (argv[i] != NULL) {
 		printf("argv not NULL terminated.\n");
@@ -144,6 +156,7 @@ int do_trace(pid_t child)
 
 int main(int argn, char **argv)
 {
+	printf("int(%ld) long(%ld)\n", sizeof(int), sizeof(long));
 	pid_t child = fork();
 
 	if (child == -1) {
