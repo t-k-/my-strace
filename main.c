@@ -65,6 +65,15 @@ long peek_long(pid_t child, unsigned long reg)
 	return ptrace(PTRACE_PEEKUSER, child, reg, NULL); 
 }
 
+#define PEEK_PTR_LONG(_reg) \
+	peek_ptr_long(child, OFFSETOF(struct user_regs_struct, _reg))
+
+long peek_ptr_long(pid_t child, unsigned long reg)
+{
+	long addr = ptrace(PTRACE_PEEKUSER, child, reg, NULL); 
+	return ptrace(PTRACE_PEEKDATA, child, addr, NULL);
+}
+
 void explain_system_call(pid_t child)
 {
 	unsigned int num, ret;
@@ -104,11 +113,13 @@ void explain_system_call(pid_t child)
 		printf("exe!!!!!!!!!!!\n");
 	} else if (num == SC_CLONE) {
 		printf("clone!!!!!!!!!!!\n");
-		tmp_long = PEEK_LONG(rdx);
-		printf("%ld\n", tmp_long);
-		tmp_long = PEEK_LONG(r10);
-		printf("%ld\n", tmp_long);
-		printf("%d\n", (int)(tmp_long & 0xffffffff));
+//		tmp_long = PEEK_PTR_LONG(rdx);
+//		printf("parent_tid: %ld\n", tmp_long);
+//		tmp_long = PEEK_PTR_LONG(r10);
+//		printf("child_tid: %ld\n", tmp_long);
+		tmp_long = PEEK_LONG(rax);
+		printf("return: %ld\n", tmp_long);
+		printf("\n");
 	}
 }
 
