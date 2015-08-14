@@ -30,7 +30,7 @@
 	if ((tmp_long & _opt) || _opt == 0x0) \
 		printf(#_opt " ")
 
-void explain_system_call(pid_t);
+void explain_system_call(pid_t, int);
 
 char *peek_str_at(pid_t child, long addr)
 {
@@ -80,7 +80,7 @@ long peek_ptr_long(pid_t child, unsigned long reg)
 	return ptrace(PTRACE_PEEKDATA, child, addr, NULL);
 }
 
-void trace(pid_t pid)
+void trace(pid_t pid, int indent)
 {
 	
 	int status;
@@ -98,7 +98,7 @@ void trace(pid_t pid)
 		  *  2) syscall exit
 		  *  3) child calls exec
 		  */
-			explain_system_call(pid);
+			explain_system_call(pid, indent);
 		}
 
 	/* when child is not exiting */
@@ -106,7 +106,14 @@ void trace(pid_t pid)
 
 }
 
-void explain_system_call(pid_t child)
+void print_indent(int indent)
+{
+	int i;
+	for (i = 0; i < indent; i++)
+		printf("  ");
+}
+
+void explain_system_call(pid_t child, int indent)
 {
 	unsigned int num, ret;
 	char *tmp_str;
@@ -121,6 +128,7 @@ void explain_system_call(pid_t child)
 		tmp_str = PEEK_STR(rdi);
 		tmp_long = PEEK_LONG(rsi);
 
+		print_indent(indent);
 		printf("%d: open (flags=0x%lx i.e. ", child, tmp_long);
 		PRI_IF_SET(O_RDONLY);
 		PRI_IF_SET(O_WRONLY);
@@ -142,6 +150,7 @@ void explain_system_call(pid_t child)
 
 		printf(" %s\n", tmp_str);
 	} else if (num == SC_EXECVE) {
+		print_indent(indent);
 		printf("%d: exe ", child);
 		tmp_long = PEEK_LONG(rdi);
 		if (tmp_long)
@@ -151,18 +160,21 @@ void explain_system_call(pid_t child)
 	//	printf("%s]\n", tmp_str);
 
 	} else if (num == SC_CLONE) {
+		print_indent(indent);
 		printf("%d: clone!\n", child);
 //		tmp_long = PEEK_PTR_LONG(rdx);
 //		printf("parent_tid: %ld\n", tmp_long);
 //		tmp_long = PEEK_PTR_LONG(r10);
 //		printf("child_tid: %ld\n", tmp_long);
 		tmp_long = PEEK_LONG(rax);
+
+		print_indent(indent);
 		printf("%d: return: %ld\n", child, tmp_long);
 
-		printf("\n");
-
 		if (tmp_long > 0) {
-			trace(tmp_long);
+			printf("\n");
+			trace(tmp_long, indent + 1);
+			printf("\n");
 		}
 	}
 }
@@ -171,16 +183,16 @@ int do_run(int argn, char **argv)
 {
 	ptrace(PTRACE_TRACEME, 0, NULL, NULL);
 	int i;
-	printf("exec: ");
-	for (i = 0; i < argn; i++) {
-		printf("%s ", argv[i]);
-	}
-	printf("\n");
+//	printf("exec: ");
+//	for (i = 0; i < argn; i++) {
+//		printf("%s ", argv[i]);
+//	}
+//	printf("\n");
 
-	if (argv[i] != NULL) {
-		printf("argv not NULL terminated.\n");
-		return 0;
-	}
+//	if (argv[i] != NULL) {
+//		printf("argv not NULL terminated.\n");
+//		return 0;
+//	}
 
 	return execvp(argv[0], argv + 0);
 }
@@ -200,7 +212,7 @@ int do_trace(pid_t child)
 		  *  2) syscall exit
 		  *  3) child calls exec
 		  */
-			explain_system_call(child);
+			explain_system_call(child, 0);
 		}
 
 	/* when child is not exiting */
