@@ -1,4 +1,5 @@
 #!/bin/sh
-echo father pid: $$
+echo parent script pid: $$
+echo before my son
 ./son.sh
-./son.sh
+echo after my son

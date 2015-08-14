@@ -1,4 +1,5 @@
 #!/bin/sh
-echo son pid: $$
-touch $$
-echo 'hello'
+echo 'hello world'
+echo "I am son (pid: $$)"
+touch /tmp/$$
+echo 'bye'

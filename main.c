@@ -30,21 +30,21 @@
 	if ((tmp_long & _opt) || _opt == 0x0) \
 		printf(#_opt " ")
 
-char *peek_string(pid_t child, unsigned long reg)
+void explain_system_call(pid_t);
+
+char *peek_str_at(pid_t child, long addr)
 {
 	union {
 		char a[8];
 		long b;
 	} piece;
-	long addr;
+
 	int i, j = 0;
 	char flag = 0;
 	static char str[4096];
 
-	addr = ptrace(PTRACE_PEEKUSER, child, reg, NULL); 
-
 	do {
-	piece.b = ptrace(PTRACE_PEEKDATA, child, addr + j, NULL);
+		piece.b = ptrace(PTRACE_PEEKDATA, child, addr + j, NULL);
 		for (i = 0; i < sizeof(piece); i++, j++) {
 			str[j] = piece.a[i];
 			if (piece.a[i] == '\0') {
@@ -55,6 +55,12 @@ char *peek_string(pid_t child, unsigned long reg)
 	} while (!flag); 
 
 	return str;
+}
+
+char *peek_string(pid_t child, unsigned long reg)
+{
+	long addr = ptrace(PTRACE_PEEKUSER, child, reg, NULL); 
+	return peek_str_at(child, addr);
 }
 
 #define PEEK_LONG(_reg) \
@@ -74,6 +80,32 @@ long peek_ptr_long(pid_t child, unsigned long reg)
 	return ptrace(PTRACE_PEEKDATA, child, addr, NULL);
 }
 
+void trace(pid_t pid)
+{
+	
+	int status;
+
+	ptrace(PTRACE_ATTACH, pid, NULL, NULL);
+
+	do {
+		ptrace(PTRACE_SYSCALL, pid, 0, 0);
+		waitpid(pid, &status, 0);
+
+		if (WSTOPSIG(status) == SIGTRAP) {
+		 /* There are three reasons why the 
+		  * child might stop with SIGTRAP:
+		  *  1) syscall entry
+		  *  2) syscall exit
+		  *  3) child calls exec
+		  */
+			explain_system_call(pid);
+		}
+
+	/* when child is not exiting */
+	} while (!WIFEXITED(status));
+
+}
+
 void explain_system_call(pid_t child)
 {
 	unsigned int num, ret;
@@ -89,7 +121,7 @@ void explain_system_call(pid_t child)
 		tmp_str = PEEK_STR(rdi);
 		tmp_long = PEEK_LONG(rsi);
 
-		printf("open (flags=0x%lx i.e. ", tmp_long);
+		printf("%d: open (flags=0x%lx i.e. ", child, tmp_long);
 		PRI_IF_SET(O_RDONLY);
 		PRI_IF_SET(O_WRONLY);
 		PRI_IF_SET(O_RDWR);
@@ -110,16 +142,28 @@ void explain_system_call(pid_t child)
 
 		printf(" %s\n", tmp_str);
 	} else if (num == SC_EXECVE) {
-		printf("exe!!!!!!!!!!!\n");
+		printf("%d: exe ", child);
+		tmp_long = PEEK_LONG(rdi);
+		if (tmp_long)
+			printf("%s", PEEK_STR(rdi));
+		printf("\n");
+		//tmp_str = ;
+	//	printf("%s]\n", tmp_str);
+
 	} else if (num == SC_CLONE) {
-		printf("clone!!!!!!!!!!!\n");
+		printf("%d: clone!\n", child);
 //		tmp_long = PEEK_PTR_LONG(rdx);
 //		printf("parent_tid: %ld\n", tmp_long);
 //		tmp_long = PEEK_PTR_LONG(r10);
 //		printf("child_tid: %ld\n", tmp_long);
 		tmp_long = PEEK_LONG(rax);
-		printf("return: %ld\n", tmp_long);
+		printf("%d: return: %ld\n", child, tmp_long);
+
 		printf("\n");
+
+		if (tmp_long > 0) {
+			trace(tmp_long);
+		}
 	}
 }
 
@@ -167,16 +211,18 @@ int do_trace(pid_t child)
 
 int main(int argn, char **argv)
 {
-	printf("int(%ld) long(%ld)\n", sizeof(int), sizeof(long));
 	pid_t child = fork();
 
 	if (child == -1) {
 		printf("fork error. \n");
 	} else if (child == 0) {
+		printf("tracee pid %d\n", getpid());
+
 		return do_run(argn - 1, argv + 1);
 	} else {
+		printf("tracer pid %d\n", getpid());
+
 		return do_trace(child);
-		sleep(3);
 	}
 
 	return 0;
