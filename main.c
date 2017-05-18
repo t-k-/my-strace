@@ -30,6 +30,9 @@
 	if ((tmp_long & _opt) || _opt == 0x0) \
 		printf(#_opt " ")
 
+#define IF_SET(_opt) \
+	if ((tmp_long & _opt) || _opt == 0x0)
+
 void explain_system_call(pid_t, int);
 
 char *peek_str_at(pid_t child, long addr)
@@ -128,27 +131,32 @@ void explain_system_call(pid_t child, int indent)
 		tmp_str = PEEK_STR(rdi);
 		tmp_long = PEEK_LONG(rsi);
 
-		print_indent(indent);
-		printf("%d: open (flags=0x%lx i.e. ", child, tmp_long);
-		PRI_IF_SET(O_RDONLY);
-		PRI_IF_SET(O_WRONLY);
-		PRI_IF_SET(O_RDWR);
-		PRI_IF_SET(O_APPEND);
-		PRI_IF_SET(O_ASYNC);
-		PRI_IF_SET(O_CLOEXEC);
-		PRI_IF_SET(O_CREAT);
-		PRI_IF_SET(O_DIRECTORY);
-		PRI_IF_SET(O_DSYNC);
-		PRI_IF_SET(O_EXCL);
-		PRI_IF_SET(O_NOCTTY);
-		PRI_IF_SET(O_NOFOLLOW);
-		PRI_IF_SET(O_NONBLOCK);
-		PRI_IF_SET(O_NDELAY);
-		PRI_IF_SET(O_SYNC);
-		PRI_IF_SET(O_TRUNC);
-		printf(")");
+		//IF_SET(O_CREAT) {
+		{
+			print_indent(indent);
+			printf("%d: open ");
+//			printf("(flags=0x%lx i.e. ", child,
+//			       tmp_long);
+//			PRI_IF_SET(O_RDONLY);
+//			PRI_IF_SET(O_WRONLY);
+//			PRI_IF_SET(O_RDWR);
+//			PRI_IF_SET(O_APPEND);
+//			PRI_IF_SET(O_ASYNC);
+//			PRI_IF_SET(O_CLOEXEC);
+//			PRI_IF_SET(O_CREAT);
+//			PRI_IF_SET(O_DIRECTORY);
+//			PRI_IF_SET(O_DSYNC);
+//			PRI_IF_SET(O_EXCL);
+//			PRI_IF_SET(O_NOCTTY);
+//			PRI_IF_SET(O_NOFOLLOW);
+//			PRI_IF_SET(O_NONBLOCK);
+//			PRI_IF_SET(O_NDELAY);
+//			PRI_IF_SET(O_SYNC);
+//			PRI_IF_SET(O_TRUNC);
+//			printf(")");
 
-		printf(" %s\n", tmp_str);
+			printf(" %s\n", tmp_str);
+		}
 	} else if (num == SC_EXECVE) {
 		print_indent(indent);
 		printf("%d: exe ", child);

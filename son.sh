@@ -1,5 +1,5 @@
 #!/bin/sh
-echo 'hello world'
-echo "I am son (pid: $$)"
+echo "$0: hello world"
+echo "$0: I am son (pid: $$)"
 touch /tmp/$$
-echo 'bye'
+echo "$0: bye"
